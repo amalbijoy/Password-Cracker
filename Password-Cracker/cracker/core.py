@@ -44,7 +44,9 @@ HASH_PATTERNS = [
     (r"^[a-fA-F0-9]{32}$", "md5"),
     (r"^[a-fA-F0-9]{40}$", "sha1"),
     (r"^[a-fA-F0-9]{64}$", "sha256"),
+    (r"^[a-fA-F0-9]{64}$", "sha3_256"),
     (r"^[a-fA-F0-9]{128}$", "sha512"),
+    (r"^[a-fA-F0-9]{128}$", "sha3_512"),
 ]
 
 COMMON_PASSWORDS = [
@@ -116,10 +118,17 @@ def hash_for_testing(password: str, algo: str = "md5") -> str:
 
 
 def detect_hash_algo(hash_str: str) -> Optional[str]:
-    """Best-effort hash type detection based on known patterns."""
+    """Best-effort hash type detection.
+
+    SHA-256 and SHA3-256 (and SHA-512/SHA3-512) have identical digest lengths,
+    so length-only detection intentionally resolves to SHA-256/SHA-512.
+    Use an explicit algorithm override when the SHA-3 family is required.
+    """
     import re
 
     for pattern, algo in HASH_PATTERNS:
+        if algo in {"sha3_256", "sha3_512"}:
+            continue
         if re.match(pattern, hash_str):
             return algo
     return None
