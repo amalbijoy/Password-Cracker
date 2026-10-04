@@ -44,9 +44,7 @@ HASH_PATTERNS = [
     (r"^[a-fA-F0-9]{32}$", "md5"),
     (r"^[a-fA-F0-9]{40}$", "sha1"),
     (r"^[a-fA-F0-9]{64}$", "sha256"),
-    (r"^[a-fA-F0-9]{64}$", "sha3_256"),
     (r"^[a-fA-F0-9]{128}$", "sha512"),
-    (r"^[a-fA-F0-9]{128}$", "sha3_512"),
 ]
 
 COMMON_PASSWORDS = [
