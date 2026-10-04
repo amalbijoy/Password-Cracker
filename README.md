@@ -1,134 +1,96 @@
 # Password Cracker
 
-> **Authorized security research only.** Do not run this tool against systems or hashes you do not own or have explicit written permission to test.
+> Password-hash cracking utility for **authorized security research, lab work, and owned data only**.
 
 ## Overview
 
-This project is a terminal-focused password hash cracking tool written in Python. It now supports **smarter attack strategies** (rule + mask attacks), **multiprocessing across dictionary/rule/mask/brute-force stages**, a non-interactive CLI, a safe-by-default HTTP API, and a folder-watching utility for batch jobs.
+The project is structured as a reusable Python package with separate layers for core attack logic, orchestration, interfaces, and utilities.
 
-The codebase is structured as a reusable Python package (`cracker`) with thin front-ends for CLI, HTTP, and tools.
+Current attack strategies include dictionary, rule-based, mask, and bounded brute-force attacks. Jobs can run through the CLI or the local HTTP API, and the watcher can process incoming hash files.
 
----
+## Capabilities
 
-## Features
+### Attack strategies
 
-- **Attack strategies** (configurable order):
-  - Dictionary attack (with multiprocessing)
-  - Rule-based attack (leet/case/affix mangling)
-  - Mask attack (e.g. `?l?l?d?d` patterns)
-  - Brute-force fallback up to a configurable length
-- **Supported hash algorithms**:
-  - MD5, SHA1, SHA256, SHA512, SHA3-256, SHA3-512
-  - bcrypt
-  - argon2
-- **Smart defaults**:
-  - Built-in common password list checked first
-  - Safe path validation for wordlists and hash files
-  - API restricted to local-only access
-- **Wordlists**:
-  - Discovers `.txt` and `.lst` files under `wordlist/`
-  - External wordlists require explicit opt-in flags
-- **Resume support**:
-  - Stores job configuration in a `cracker_resume.json` file per output directory
-- **Results**:
-  - Writes `cracked_results.txt` and `failed_attempts.txt` into a job-specific output folder
-- **CLI**:
-  - Interactive mode for single hash or file-of-hashes
-  - Non-interactive flags for automated usage
-  - Watch mode for auto-cracking incoming files
-- **HTTP API**:
-  - Flask-based `/crack` endpoint wrapping the full attack pipeline
-  - Local-only by default and defensive error handling
+- Dictionary attack
+- Rule-based mangling
+- Mask attack using patterns such as `?l?l?d?d`
+- Brute-force search up to a configured maximum length
+- Configurable attack order
 
----
+### Supported verification algorithms
 
-## Architecture
+- MD5
+- SHA-1
+- SHA-256
+- SHA-512
+- SHA3-256
+- SHA3-512
+- bcrypt
+- Argon2
 
-At a high level:
+### Operational features
 
-- **`cracker.core`** – Pure domain logic:
-  - Hash algorithm detection
-  - Hash verification across supported algorithms
-  - Dictionary, rule-based, mask, and brute-force attack engines
-- **`cracker.app`** – Application/service layer:
-  - `CrackJobConfig` and `CrackJobResult` data structures
-  - High-level `run_crack_job` function that orchestrates attacks for one or more hashes
-  - Helpers for reading hashes from files and listing wordlists
-  - `write_results` to persist cracked/failed hashes to disk
-- **Interface layers:**
-  - **CLI (`cracker.cli`)**
-  - **HTTP API (`cracker.api`)**
-  - **Tools (`cracker.tools`)**
-  - **Entry script (`password_cracker.py`)**
+- Multiprocessing support across attack engines
+- Built-in common-password candidates
+- Wordlist discovery under `wordlist/`
+- Resume configuration
+- Job-specific cracked/failed result files
+- Interactive and non-interactive CLI modes
+- Folder watch mode
+- Local-only Flask API by default
 
----
+## Important hash-detection detail
+
+SHA-256 and SHA3-256 both produce 64-character hexadecimal digests. SHA-512 and SHA3-512 both produce 128-character hexadecimal digests.
+
+Because digest length alone cannot distinguish those pairs, the tool intentionally auto-detects the SHA-2 variant for those ambiguous lengths. Use an explicit algorithm option when working with a SHA-3 hash.
 
 ## Installation
 
-Prerequisites:
-
-- Python 3 (with `pip`)
-- On Windows, PowerShell is used by `run.bat` and `install.py`.
-
-Basic steps:
+From the repository root:
 
 ```bash
-cd Password-Cracker
 python install.py --upgrade-pip
-# or
-pip install -r requirements.txt
 ```
 
----
+or:
 
-## CLI Usage
+```bash
+python -m pip install -r requirements.txt
+```
 
-### Interactive mode
+## CLI
+
+Interactive mode:
 
 ```bash
 python -m cracker.cli
 ```
 
-### Non-interactive mode
+Non-interactive example:
 
 ```bash
-# Crack a single hash with a custom wordlist
 python -m cracker.cli \
   --hash 5d41402abc4b2a76b9719d911017c592 \
   --wordlist wordlist/rockyou.txt \
   --maxlen 5
 ```
 
-### Attack customization
+Customize attack order:
 
 ```bash
-# Enable mask attack with custom pattern
 python -m cracker.cli \
   --hash 5d41402abc4b2a76b9719d911017c592 \
   --mask "?l?l?d?d" \
   --attack-order dictionary,rules,mask,bruteforce
-
-# Disable rule-based attacks
-python -m cracker.cli --hash <hash> --no-rules
-
-# Override detected algorithm
-python -m cracker.cli --hash <hash> --algo sha256
 ```
 
-### Folder watch mode
+## HTTP API
 
-```bash
-python -m cracker.cli --watch
-python -m cracker.cli --watch --watch-folder incoming_hashes_custom
-```
+The Flask API is restricted to local requests by default.
 
----
-
-## HTTP API Usage
-
-> **Local-only:** the API rejects non-local requests by default.
-
-Start the Flask app (from `Password-Cracker` directory):
+Start it from the repository root with the command documented by the current Flask application:
 
 ```bash
 flask --app cracker.api run
@@ -149,59 +111,49 @@ curl -X POST http://127.0.0.1:5000/crack \
   }'
 ```
 
-Response:
+## Safety and security
 
-```json
-{
-  "cracked": [
-    { "hash": "5d41402abc4b2a76b9719d911017c592", "password": "hello" }
-  ],
-  "failed": []
-}
-```
+Use this tool only on hashes and files you own or are explicitly authorized to test.
 
----
+Current defensive controls include:
 
-## Safe Defaults & Security
+- Local-only API behavior by default
+- Wordlist path restrictions unless external-wordlist access is explicitly enabled
+- Hash-file path restrictions unless external access is explicitly enabled
+- Debug mode disabled by default when the API is started directly
 
-- **Local-only API**: non-local requests receive HTTP 403.
-- **Path validation**: wordlists must live inside `wordlist/` unless you pass `--allow-external-wordlist` (or `allow_external_wordlist` in API).
-- **Hash files**: only files inside the working directory are accepted unless explicitly allowed (`--allow-external-hash-file` or `allow_external_hash_file`).
-- **Debug disabled**: the API defaults to `debug=False` when launched directly.
-
----
+Cracking can be extremely CPU-intensive, especially for brute-force searches. Use conservative limits and test in controlled environments.
 
 ## Testing
+
+Run:
 
 ```bash
 pytest
 ```
 
-Test suite coverage:
+The test suite covers core hashing/attack behavior plus application, CLI, API, and tool wiring.
 
-- `test_core.py`: hashing + attack engines (dictionary, rule, mask, brute-force)
-- `test_app.py`: job configuration, file safety, results writing
-- `test_cli_api_tools.py`: CLI, API, and folder watcher wiring
+## Architecture
 
----
+```text
+cracker/
+├── core.py      # hashing + attack engines
+├── app.py       # job orchestration + persistence
+├── api.py       # Flask API
+├── cli.py       # command-line interface
+└── tools.py     # utility/watch functionality
+```
 
-## Performance Notes
+The repository also contains the top-level launcher, installation helpers, tests, and wordlists.
 
-- Dictionary, rule, mask, and brute-force attacks all support multiprocessing.
-- Brute-force grows exponentially with `maxlen`—use with care.
-- Mask attacks are the best trade-off when you have a predictable pattern.
+## Limitations
 
----
+- Brute-force search grows exponentially with maximum length and charset size.
+- Multiprocessing uses the available CPU resources and can create significant load.
+- Hash identification from a digest string is best-effort; explicit algorithm selection is preferred when the format is ambiguous.
+- This is a security-learning tool, not a commercial password-recovery service.
 
-## Contributing
+## License
 
-- Add tests for new behavior under `tests/`.
-- Keep core logic (`cracker.core`) free of CLI/API-specific assumptions.
-- Keep `cracker.app` focused on orchestration and I/O, with UI concerns in CLI/API/tools.
-
----
-
-
-## Hash detection note
-
-SHA-256 and SHA3-256 produce hexadecimal digests of the same length, as do SHA-512 and SHA3-512. A digest string alone cannot reliably distinguish those pairs. The tool therefore auto-detects the SHA-2 variant and supports an explicit algorithm override when working with SHA-3 hashes.
+See [LICENSE](LICENSE).
