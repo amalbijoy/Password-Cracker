@@ -22,6 +22,8 @@ def test_detect_hash_algo_known_algorithms():
     sha1_hash = hashlib.sha1(b"hello").hexdigest()
     sha256_hash = hashlib.sha256(b"hello").hexdigest()
     sha512_hash = hashlib.sha512(b"hello").hexdigest()
+    sha3_256_hash = hashlib.sha3_256(b"hello").hexdigest()
+    sha3_512_hash = hashlib.sha3_512(b"hello").hexdigest()
 
     ph = PasswordHasher()
     argon_hash = ph.hash("hello")
@@ -31,6 +33,10 @@ def test_detect_hash_algo_known_algorithms():
     assert detect_hash_algo(sha1_hash) == "sha1"
     assert detect_hash_algo(sha256_hash) == "sha256"
     assert detect_hash_algo(sha512_hash) == "sha512"
+    # SHA-3 digests have the same lengths as SHA-2 digests and therefore
+    # cannot be distinguished from the digest string alone.
+    assert detect_hash_algo(sha3_256_hash) == "sha256"
+    assert detect_hash_algo(sha3_512_hash) == "sha512"
     assert detect_hash_algo(argon_hash) == "argon2"
     assert detect_hash_algo(bcrypt_hash) == "bcrypt"
 
