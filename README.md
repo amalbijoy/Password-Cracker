@@ -198,3 +198,5 @@ Test suite coverage:
 - Add tests for new behavior under `tests/`.
 - Keep core logic (`cracker.core`) free of CLI/API-specific assumptions.
 - Keep `cracker.app` focused on orchestration and I/O, with UI concerns in CLI/API/tools.
+
+---
