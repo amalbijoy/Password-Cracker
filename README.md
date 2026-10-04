@@ -200,3 +200,8 @@ Test suite coverage:
 - Keep `cracker.app` focused on orchestration and I/O, with UI concerns in CLI/API/tools.
 
 ---
+
+
+## Hash detection note
+
+SHA-256 and SHA3-256 produce hexadecimal digests of the same length, as do SHA-512 and SHA3-512. A digest string alone cannot reliably distinguish those pairs. The tool therefore auto-detects the SHA-2 variant and supports an explicit algorithm override when working with SHA-3 hashes.
